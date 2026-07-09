@@ -13,6 +13,10 @@ import java.awt.event.KeyEvent;
 import javax.swing.SwingUtilities;
 import util.Validador;
 
+import logica.Jugador;
+import logica.Paleta;
+import logica.SistemaRondas;
+
 public class VentanaPrincipal extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger =
@@ -21,12 +25,18 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
     private boolean enPausaEjemplo = false;
 
+    private Jugador jugadorIzquierdo;
+    private Jugador jugadorDerecho;
+    private SistemaRondas sistemaRondas;
+    private javax.swing.Timer temporizadorRonda;
+
 
     public VentanaPrincipal() {
         initComponents();
         setLocationRelativeTo(null); 
         configurarEventosTeclado();
         conectarBotones();
+        inicializarJugadoresYPaletas(); 
     }
 
 
@@ -35,6 +45,28 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         lblJugador1.setText(Jugador1);
         lblNombreDerecho.setText(Jugador2);
 
+        if (jugadorIzquierdo != null) {
+            jugadorIzquierdo.setNombre(Jugador1);
+        }
+        if (jugadorDerecho != null) {
+            jugadorDerecho.setNombre(Jugador2);
+        }
+
+    }
+
+
+    private void inicializarJugadoresYPaletas() {
+
+        Paleta paletaIzquierda = new Paleta(
+                Paleta.Posicion.IZQUIERDA, 12, 70, 6, getPanelJuego());
+
+        Paleta paletaDerecha = new Paleta(
+                Paleta.Posicion.DERECHA, 12, 70, 6, getPanelJuego());
+
+        jugadorIzquierdo = new Jugador(lblJugador1.getText(), paletaIzquierda);
+        jugadorDerecho = new Jugador(lblNombreDerecho.getText(), paletaDerecha);
+
+        sistemaRondas = new SistemaRondas(jugadorIzquierdo, jugadorDerecho);
     }
 
 
@@ -57,20 +89,20 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
                 switch (e.getKeyCode()) {
 
-                    case KeyEvent.VK_W:
-                        //  Integrante 2
+                    case KeyEvent.VK_W:                       
+                        jugadorIzquierdo.getPaleta().setMoviendoArriba(true);
                         break;
 
                     case KeyEvent.VK_S:
-                        //  Integrante 2
+                        jugadorIzquierdo.getPaleta().setMoviendoAbajo(true);
                         break;
 
                     case KeyEvent.VK_UP:
-                        //  Integrante 2
+                        jugadorDerecho.getPaleta().setMoviendoArriba(true);
                         break;
 
                     case KeyEvent.VK_DOWN:
-                        //  Integrante 2
+                        jugadorDerecho.getPaleta().setMoviendoAbajo(true);
                         break;
 
                     default:
@@ -82,7 +114,27 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             @Override
             public void keyReleased(KeyEvent e) {
 
-                //  Integrante 2
+                switch (e.getKeyCode()) {
+
+                    case KeyEvent.VK_W:
+                        jugadorIzquierdo.getPaleta().setMoviendoArriba(false);
+                        break;
+
+                    case KeyEvent.VK_S:
+                        jugadorIzquierdo.getPaleta().setMoviendoAbajo(false);
+                        break;
+
+                    case KeyEvent.VK_UP:
+                        jugadorDerecho.getPaleta().setMoviendoArriba(false);
+                        break;
+
+                    case KeyEvent.VK_DOWN:
+                        jugadorDerecho.getPaleta().setMoviendoAbajo(false);
+                        break;
+
+                    default:
+                        break;
+                }
 
             }
 
@@ -97,6 +149,10 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         requestFocusInWindow();
 
+        jugadorIzquierdo.getPaleta().iniciar();
+        jugadorDerecho.getPaleta().iniciar();
+        iniciarTemporizadorRonda();
+
     }
 
     
@@ -107,6 +163,17 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         String estado = enPausaEjemplo ? "PAUSADO" : "REANUDADO";
 
         System.out.println("[Prueba] Estado: " + estado);
+
+        jugadorIzquierdo.getPaleta().setPausado(enPausaEjemplo);
+        jugadorDerecho.getPaleta().setPausado(enPausaEjemplo);
+
+        if (temporizadorRonda != null) {
+            if (enPausaEjemplo) {
+                temporizadorRonda.stop();
+            } else {
+                temporizadorRonda.start();
+            }
+        }
 
     }
 
@@ -120,6 +187,59 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         lblTemporizador.setText(
                 String.valueOf(Validador.TIEMPO_INICIAL_RONDA));
+
+        if (temporizadorRonda != null) {
+            temporizadorRonda.stop();
+        }
+
+        enPausaEjemplo = false;
+        jugadorIzquierdo.getPaleta().setPausado(false);
+        jugadorDerecho.getPaleta().setPausado(false);
+
+        sistemaRondas.reiniciarPartida();
+
+        lblTemporizador.setText(String.valueOf(sistemaRondas.getTiempoRestante()));
+
+    }
+
+
+    private void iniciarTemporizadorRonda() {
+
+        if (temporizadorRonda != null && temporizadorRonda.isRunning()) {
+            return;
+        }
+
+        actualizarTemporizador(sistemaRondas.getTiempoRestante());
+
+        temporizadorRonda = new javax.swing.Timer(1000, evt -> {
+
+            boolean rondaTerminada = sistemaRondas.disminuirTiempo();
+
+            actualizarTemporizador(sistemaRondas.getTiempoRestante());
+            actualizarPuntosIzquierdo(jugadorIzquierdo.getPuntos());
+            actualizarPuntosDerecho(jugadorDerecho.getPuntos());
+
+            if (rondaTerminada) {
+                if (sistemaRondas.isPartidaFinalizada()) {
+                    temporizadorRonda.stop();
+                    mostrarResultadoFinal();
+                } else {
+                    System.out.println("[Integrante 2] Ronda " + sistemaRondas.getRondaActual()
+                            + " comienza. Puntaje reiniciado para la nueva ronda.");
+                }
+            }
+        });
+
+        temporizadorRonda.start();
+    }
+
+    private void mostrarResultadoFinal() {
+
+        javax.swing.JOptionPane.showMessageDialog(
+                this,
+                sistemaRondas.obtenerResumenFinal(),
+                "Resultado de la partida",
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
 
     }
 
@@ -154,7 +274,6 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
     }
 
-    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
