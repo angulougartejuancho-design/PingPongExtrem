@@ -16,29 +16,31 @@ import util.Validador;
 import logica.Jugador;
 import logica.Paleta;
 import logica.SistemaRondas;
+import logica.GestorBolas;
+import logica.Dificultad;
 
 public class VentanaPrincipal extends javax.swing.JFrame {
 
-    private static final java.util.logging.Logger logger =
-            java.util.logging.Logger.getLogger(VentanaPrincipal.class.getName());
-
+    private static final java.util.logging.Logger logger
+            = java.util.logging.Logger.getLogger(VentanaPrincipal.class.getName());
 
     private boolean enPausaEjemplo = false;
 
     private Jugador jugadorIzquierdo;
     private Jugador jugadorDerecho;
     private SistemaRondas sistemaRondas;
+    private GestorBolas gestorBolas;
+    private Dificultad dificultadSeleccionada;
     private javax.swing.Timer temporizadorRonda;
-
 
     public VentanaPrincipal() {
         initComponents();
-        setLocationRelativeTo(null); 
+        cargarDificultades();
+        setLocationRelativeTo(null);
         configurarEventosTeclado();
         conectarBotones();
-        inicializarJugadoresYPaletas(); 
+        inicializarJugadoresYPaletas();
     }
-
 
     public void establecerNombresJugadores(String Jugador1, String Jugador2) {
 
@@ -48,12 +50,48 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         if (jugadorIzquierdo != null) {
             jugadorIzquierdo.setNombre(Jugador1);
         }
+
         if (jugadorDerecho != null) {
             jugadorDerecho.setNombre(Jugador2);
         }
-
     }
 
+    private void cargarDificultades() {
+
+        cmbDificultad.removeAllItems();
+
+        cmbDificultad.addItem("Fácil");
+        cmbDificultad.addItem("Normal");
+        cmbDificultad.addItem("Difícil");
+        cmbDificultad.addItem("Extremo");
+
+        cmbDificultad.setSelectedItem("Normal");
+    }
+
+    private Dificultad obtenerDificultadSeleccionada() {
+
+        String seleccion = (String) cmbDificultad.getSelectedItem();
+
+        if (seleccion == null) {
+            return Dificultad.NORMAL;
+        }
+
+        switch (seleccion) {
+
+            case "Fácil":
+                return Dificultad.FACIL;
+
+            case "Difícil":
+                return Dificultad.DIFICIL;
+
+            case "Extremo":
+                return Dificultad.EXTREMO;
+
+            case "Normal":
+            default:
+                return Dificultad.NORMAL;
+        }
+    }
 
     private void inicializarJugadoresYPaletas() {
 
@@ -67,15 +105,15 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         jugadorDerecho = new Jugador(lblNombreDerecho.getText(), paletaDerecha);
 
         sistemaRondas = new SistemaRondas(jugadorIzquierdo, jugadorDerecho);
+
+        gestorBolas = new GestorBolas(getPanelJuego(), jugadorIzquierdo, jugadorDerecho);
+        getPanelJuego().configurar(jugadorIzquierdo, jugadorDerecho, gestorBolas);
     }
 
-
     private void conectarBotones() {
-
         btnComenzar.addActionListener(evt -> iniciarJuego());
         btnPausa.addActionListener(evt -> pausarJuego());
         btnReinicio.addActionListener(evt -> reiniciarJuego());
-
     }
 
     private void configurarEventosTeclado() {
@@ -89,7 +127,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
                 switch (e.getKeyCode()) {
 
-                    case KeyEvent.VK_W:                       
+                    case KeyEvent.VK_W:
                         jugadorIzquierdo.getPaleta().setMoviendoArriba(true);
                         break;
 
@@ -108,7 +146,6 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                     default:
                         break;
                 }
-
             }
 
             @Override
@@ -135,27 +172,73 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                     default:
                         break;
                 }
-
             }
-
         });
-
     }
 
-    
     private void iniciarJuego() {
 
-        System.out.println("[Prueba] Botón Iniciar presionado.");
+        System.out.println("[Juego] Botón comenzar presionado.");
+
+        if (!gestorBolas.isGenerando()) {
+
+            dificultadSeleccionada
+                    = obtenerDificultadSeleccionada();
+
+            gestorBolas.setDificultad(
+                    dificultadSeleccionada
+            );
+
+            cmbDificultad.setEnabled(false);
+        }
+
+        enPausaEjemplo = false;
 
         requestFocusInWindow();
 
+        jugadorIzquierdo.getPaleta().setPausado(false);
+        jugadorDerecho.getPaleta().setPausado(false);
+
         jugadorIzquierdo.getPaleta().iniciar();
         jugadorDerecho.getPaleta().iniciar();
+
+        gestorBolas.setPausado(false);
+        gestorBolas.iniciar();
+
         iniciarTemporizadorRonda();
 
+        System.out.println(
+                "[Juego] Dificultad seleccionada: "
+                + dificultadSeleccionada
+        );
     }
 
-    
+    private Dificultad seleccionarDificultad() {
+
+        Dificultad[] opciones = {
+            Dificultad.FACIL,
+            Dificultad.NORMAL,
+            Dificultad.DIFICIL,
+            Dificultad.EXTREMO
+        };
+
+        Object seleccion = javax.swing.JOptionPane.showInputDialog(
+                this,
+                "Seleccione la dificultad:",
+                "Dificultad",
+                javax.swing.JOptionPane.QUESTION_MESSAGE,
+                null,
+                opciones,
+                Dificultad.NORMAL
+        );
+
+        if (seleccion instanceof Dificultad) {
+            return (Dificultad) seleccion;
+        }
+
+        return null;
+    }
+
     private void pausarJuego() {
 
         enPausaEjemplo = !enPausaEjemplo;
@@ -167,6 +250,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         jugadorIzquierdo.getPaleta().setPausado(enPausaEjemplo);
         jugadorDerecho.getPaleta().setPausado(enPausaEjemplo);
 
+        gestorBolas.setPausado(enPausaEjemplo);
+
         if (temporizadorRonda != null) {
             if (enPausaEjemplo) {
                 temporizadorRonda.stop();
@@ -174,34 +259,47 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 temporizadorRonda.start();
             }
         }
-
     }
 
-    
     private void reiniciarJuego() {
 
-        System.out.println("[Prueba] Botón Reiniciar presionado.");
+        cmbDificultad.setEnabled(true);
+        cmbDificultad.setSelectedItem("Normal");
 
-        lblPuntos1.setText("0");
-        lblPuntos2.setText("0");
-
-        lblTemporizador.setText(
-                String.valueOf(Validador.TIEMPO_INICIAL_RONDA));
+        System.out.println("[Juego] Reiniciando partida.");
 
         if (temporizadorRonda != null) {
             temporizadorRonda.stop();
         }
 
+        gestorBolas.detenerTodo();
+
         enPausaEjemplo = false;
+        dificultadSeleccionada = null;
+
         jugadorIzquierdo.getPaleta().setPausado(false);
         jugadorDerecho.getPaleta().setPausado(false);
 
+        jugadorIzquierdo.getPaleta().setMoviendoArriba(false);
+        jugadorIzquierdo.getPaleta().setMoviendoAbajo(false);
+
+        jugadorDerecho.getPaleta().setMoviendoArriba(false);
+        jugadorDerecho.getPaleta().setMoviendoAbajo(false);
+
         sistemaRondas.reiniciarPartida();
 
-        lblTemporizador.setText(String.valueOf(sistemaRondas.getTiempoRestante()));
+        lblPuntos1.setText("0");
+        lblPuntos2.setText("0");
 
+        lblTemporizador.setText(
+                String.valueOf(
+                        sistemaRondas.getTiempoRestante()
+                )
+        );
+
+        getPanelJuego().repaint();
+        requestFocusInWindow();
     }
-
 
     private void iniciarTemporizadorRonda() {
 
@@ -220,12 +318,25 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             actualizarPuntosDerecho(jugadorDerecho.getPuntos());
 
             if (rondaTerminada) {
+
+                // Se eliminan todas las bolas de la ronda anterior.
+                gestorBolas.detenerTodo();
+
                 if (sistemaRondas.isPartidaFinalizada()) {
+
                     temporizadorRonda.stop();
                     mostrarResultadoFinal();
+
                 } else {
-                    System.out.println("[Integrante 2] Ronda " + sistemaRondas.getRondaActual()
-                            + " comienza. Puntaje reiniciado para la nueva ronda.");
+
+                    System.out.println("[Juego] Comienza la ronda "
+                            + sistemaRondas.getRondaActual());
+
+                    // Mantiene la misma dificultad seleccionada.
+                    gestorBolas.setDificultad(dificultadSeleccionada);
+
+                    // Comienza la siguiente ronda con bolas nuevas.
+                    gestorBolas.iniciar();
                 }
             }
         });
@@ -235,50 +346,43 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
     private void mostrarResultadoFinal() {
 
+        gestorBolas.detenerTodo();
+
+        jugadorIzquierdo.getPaleta().setPausado(true);
+        jugadorDerecho.getPaleta().setPausado(true);
+
         javax.swing.JOptionPane.showMessageDialog(
                 this,
                 sistemaRondas.obtenerResumenFinal(),
                 "Resultado de la partida",
-                javax.swing.JOptionPane.INFORMATION_MESSAGE);
-
+                javax.swing.JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
-   
-    public PanelJuego getPanelJuego() {
-
-        return (PanelJuego) PanelJuego;
-
+    public PanelDibujoJuego getPanelJuego() {
+        return (PanelDibujoJuego) PanelJuego;
     }
 
-   
     public void actualizarPuntosIzquierdo(int puntos) {
-
-        SwingUtilities.invokeLater(() ->
-                lblPuntos1.setText(String.valueOf(puntos)));
-
+        SwingUtilities.invokeLater(()
+                -> lblPuntos1.setText(String.valueOf(puntos)));
     }
 
-    
     public void actualizarPuntosDerecho(int puntos) {
-
-        SwingUtilities.invokeLater(() ->
-                lblPuntos2.setText(String.valueOf(puntos)));
-
+        SwingUtilities.invokeLater(()
+                -> lblPuntos2.setText(String.valueOf(puntos)));
     }
 
-   
     public void actualizarTemporizador(int segundos) {
-
-        SwingUtilities.invokeLater(() ->
-                lblTemporizador.setText(String.valueOf(segundos)));
-
+        SwingUtilities.invokeLater(()
+                -> lblTemporizador.setText(String.valueOf(segundos)));
     }
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        PanelJuego = new javax.swing.JPanel();
+        PanelJuego = new presentacion.PanelDibujoJuego();
         lblJugador1 = new javax.swing.JLabel();
         lblPuntos1 = new javax.swing.JLabel();
         lblTemporizador = new javax.swing.JLabel();
@@ -287,6 +391,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         btnComenzar = new javax.swing.JButton();
         btnPausa = new javax.swing.JButton();
         btnReinicio = new javax.swing.JButton();
+        cmbDificultad = new javax.swing.JComboBox<>();
+        jLabel1 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setResizable(false);
@@ -325,6 +431,10 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         btnReinicio.setText("Reiniciar");
 
+        cmbDificultad.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+
+        jLabel1.setText("Dificultad:");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -354,13 +464,23 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                         .addComponent(PanelJuego, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addContainerGap())
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(6, 6, 6)
-                        .addComponent(btnComenzar)
-                        .addGap(161, 161, 161)
-                        .addComponent(btnPausa, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 121, Short.MAX_VALUE)
-                        .addComponent(btnReinicio, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(49, 49, 49))))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(6, 6, 6)
+                                .addComponent(btnComenzar)
+                                .addGap(161, 161, 161))
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                .addComponent(jLabel1)
+                                .addGap(18, 18, 18)))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(btnPausa, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 121, Short.MAX_VALUE)
+                                .addComponent(btnReinicio, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(49, 49, 49))
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(cmbDificultad, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -385,7 +505,11 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                     .addComponent(btnComenzar)
                     .addComponent(btnPausa)
                     .addComponent(btnReinicio))
-                .addContainerGap(115, Short.MAX_VALUE))
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(cmbDificultad, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel1))
+                .addContainerGap(75, Short.MAX_VALUE))
         );
 
         pack();
@@ -421,6 +545,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JButton btnComenzar;
     private javax.swing.JButton btnPausa;
     private javax.swing.JButton btnReinicio;
+    private javax.swing.JComboBox<String> cmbDificultad;
+    private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel lblJugador1;
     private javax.swing.JLabel lblNombreDerecho;
     private javax.swing.JLabel lblPuntos1;
