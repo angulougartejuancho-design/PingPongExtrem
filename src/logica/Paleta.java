@@ -6,16 +6,13 @@ package logica;
 
 import java.awt.Component;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- *
- * @author Anyel
- */
-public class Paleta  implements Runnable {
+public class Paleta implements Runnable {
 
-  
     public enum Posicion {
-        IZQUIERDA, DERECHA
+        IZQUIERDA,
+        DERECHA
     }
 
     private static final int MARGEN_LATERAL = 20;
@@ -24,7 +21,18 @@ public class Paleta  implements Runnable {
     private final Posicion posicion;
     private final int ancho;
     private final int alto;
-    private final int velocidad;
+
+    /*
+     * Velocidad normal configurada al crear la paleta.
+     */
+    private final int velocidadBase;
+
+    /*
+     * Velocidad que se usa actualmente.
+     * Puede reducirse temporalmente con la bola congelante.
+     */
+    private volatile int velocidadActual;
+
     private final Component areaJuego;
 
     private volatile int y;
@@ -34,27 +42,50 @@ public class Paleta  implements Runnable {
     private final AtomicBoolean pausado = new AtomicBoolean(false);
     private final AtomicBoolean corriendo = new AtomicBoolean(false);
 
+    /*
+     * Permite controlar efectos congelantes consecutivos.
+     */
+    private final AtomicInteger numeroCongelacion = new AtomicInteger(0);
+
     private Thread hilo;
 
-    public Paleta(Posicion posicion, int ancho, int alto, int velocidad, Component areaJuego) {
+    public Paleta(
+            Posicion posicion,
+            int ancho,
+            int alto,
+            int velocidad,
+            Component areaJuego) {
+
         this.posicion = posicion;
         this.ancho = ancho;
         this.alto = alto;
-        this.velocidad = velocidad;
+        this.velocidadBase = velocidad;
+        this.velocidadActual = velocidad;
         this.areaJuego = areaJuego;
         this.y = calcularPosicionCentral();
     }
 
     public void iniciar() {
+
         if (corriendo.compareAndSet(false, true)) {
-            hilo = new Thread(this, "Hilo-Paleta-" + posicion);
+
+            hilo = new Thread(
+                    this,
+                    "Hilo-Paleta-" + posicion
+            );
+
             hilo.setDaemon(true);
             hilo.start();
         }
     }
 
     public void detener() {
+
         corriendo.set(false);
+
+        subiendo.set(false);
+        bajando.set(false);
+
         if (hilo != null) {
             hilo.interrupt();
         }
@@ -70,22 +101,32 @@ public class Paleta  implements Runnable {
 
     @Override
     public void run() {
+
         while (corriendo.get()) {
+
             try {
+
                 if (!pausado.get()) {
+
                     if (subiendo.get()) {
                         moverArriba();
                     }
+
                     if (bajando.get()) {
                         moverAbajo();
                     }
                 }
+
                 Thread.sleep(RETARDO_MOVIMIENTO_MS);
+
             } catch (InterruptedException e) {
+
                 Thread.currentThread().interrupt();
                 break;
             }
         }
+
+        corriendo.set(false);
     }
 
     public void setMoviendoArriba(boolean valor) {
@@ -97,11 +138,17 @@ public class Paleta  implements Runnable {
     }
 
     public synchronized void moverArriba() {
-        y = validarLimiteSuperior(y - velocidad);
+
+        y = validarLimiteSuperior(
+                y - velocidadActual
+        );
     }
 
     public synchronized void moverAbajo() {
-        y = validarLimiteInferior(y + velocidad);
+
+        y = validarLimiteInferior(
+                y + velocidadActual
+        );
     }
 
     private int validarLimiteSuperior(int nuevaY) {
@@ -109,33 +156,132 @@ public class Paleta  implements Runnable {
     }
 
     private int validarLimiteInferior(int nuevaY) {
-        int limiteInferior = Math.max(0, obtenerAltoTablero() - alto);
-        return Math.min(limiteInferior, nuevaY);
+
+        int limiteInferior = Math.max(
+                0,
+                obtenerAltoTablero() - alto
+        );
+
+        return Math.min(
+                limiteInferior,
+                nuevaY
+        );
+    }
+
+    /**
+     * Reduce la velocidad de esta paleta durante el tiempo indicado.
+     *
+     * @param milisegundos duración del efecto
+     */
+    public void congelarDurante(int milisegundos) {
+
+        /*
+         * Cada congelamiento obtiene un número diferente.
+         * Así un efecto anterior no restaura la velocidad antes de tiempo.
+         */
+        int congelacionActual
+                = numeroCongelacion.incrementAndGet();
+
+        velocidadActual = Math.max(
+                1,
+                velocidadBase / 2
+        );
+
+        Thread hiloCongelacion = new Thread(() -> {
+
+            try {
+
+                Thread.sleep(milisegundos);
+
+            } catch (InterruptedException e) {
+
+                Thread.currentThread().interrupt();
+                return;
+            }
+
+            /*
+             * Solo la congelación más reciente puede restaurar
+             * la velocidad normal.
+             */
+            if (numeroCongelacion.get() == congelacionActual) {
+                velocidadActual = velocidadBase;
+            }
+
+        }, "Efecto-Congelante-" + posicion);
+
+        hiloCongelacion.setDaemon(true);
+        hiloCongelacion.start();
     }
 
     public synchronized void reiniciarPosicion() {
+
         y = calcularPosicionCentral();
+
+        subiendo.set(false);
+        bajando.set(false);
+
+        velocidadActual = velocidadBase;
+
+        /*
+         * Invalida cualquier hilo congelante anterior.
+         */
+        numeroCongelacion.incrementAndGet();
     }
 
     private int calcularPosicionCentral() {
-        return Math.max(0, (obtenerAltoTablero() - alto) / 2);
+
+        return Math.max(
+                0,
+                (obtenerAltoTablero() - alto) / 2
+        );
     }
 
     private int obtenerAltoTablero() {
+
         int altoActual = areaJuego.getHeight();
-        return altoActual > 0 ? altoActual : areaJuego.getPreferredSize().height;
+
+        if (altoActual > 0) {
+            return altoActual;
+        }
+
+        if (areaJuego.getPreferredSize() != null
+                && areaJuego.getPreferredSize().height > 0) {
+
+            return areaJuego.getPreferredSize().height;
+        }
+
+        return 400;
     }
 
     private int obtenerAnchoTablero() {
+
         int anchoActual = areaJuego.getWidth();
-        return anchoActual > 0 ? anchoActual : areaJuego.getPreferredSize().width;
+
+        if (anchoActual > 0) {
+            return anchoActual;
+        }
+
+        if (areaJuego.getPreferredSize() != null
+                && areaJuego.getPreferredSize().width > 0) {
+
+            return areaJuego.getPreferredSize().width;
+        }
+
+        return 900;
     }
 
     public int getX() {
+
         if (posicion == Posicion.IZQUIERDA) {
             return MARGEN_LATERAL;
         }
-        return Math.max(MARGEN_LATERAL, obtenerAnchoTablero() - MARGEN_LATERAL - ancho);
+
+        return Math.max(
+                MARGEN_LATERAL,
+                obtenerAnchoTablero()
+                - MARGEN_LATERAL
+                - ancho
+        );
     }
 
     public int getY() {
@@ -153,5 +299,16 @@ public class Paleta  implements Runnable {
     public Posicion getPosicion() {
         return posicion;
     }
-}
 
+    public int getVelocidadBase() {
+        return velocidadBase;
+    }
+
+    public int getVelocidadActual() {
+        return velocidadActual;
+    }
+
+    public boolean isCongelada() {
+        return velocidadActual < velocidadBase;
+    }
+}

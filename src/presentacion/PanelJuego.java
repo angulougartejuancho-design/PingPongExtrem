@@ -4,31 +4,180 @@
  */
 package presentacion;
 
+import java.awt.Color;
+import java.awt.Graphics;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+
+import logica.GestorBolas;
+import logica.Jugador;
+
 /**
  *
  * @author angul
  */
-import javax.swing.SwingUtilities;
-
 public class PanelJuego extends javax.swing.JPanel {
 
+    /*
+     * Jugadores que contienen las paletas izquierda y derecha.
+     * Se asignan desde VentanaPrincipal por medio de configurar().
+     */
+    private Jugador jugadorIzquierdo;
+    private Jugador jugadorDerecho;
+
+    /*
+     * Gestor que contiene y administra todas las bolas activas.
+     */
+    private GestorBolas gestorBolas;
+
+    /*
+     * Temporizador encargado de repintar el panel.
+     * No mueve las bolas: solamente actualiza el dibujo.
+     */
+    private final Timer temporizadorDibujo;
+
     public PanelJuego() {
+
+        /*
+         * Inicializa el diseño creado con el editor visual de NetBeans.
+         */
         initComponents();
+
+        /*
+         * Redibuja el panel aproximadamente 60 veces por segundo.
+         * 1000 / 16 es aproximadamente 62 actualizaciones por segundo.
+         */
+        temporizadorDibujo = new Timer(16, evento -> repaint());
+        temporizadorDibujo.start();
     }
-    
-    
+
+    /**
+     * Recibe los jugadores y el gestor de bolas creados en VentanaPrincipal.
+     *
+     * @param jugadorIzquierdo jugador ubicado en el lado izquierdo
+     * @param jugadorDerecho jugador ubicado en el lado derecho
+     * @param gestorBolas administrador de las bolas activas
+     */
+    public void configurar(
+            Jugador jugadorIzquierdo,
+            Jugador jugadorDerecho,
+            GestorBolas gestorBolas) {
+
+        this.jugadorIzquierdo = jugadorIzquierdo;
+        this.jugadorDerecho = jugadorDerecho;
+        this.gestorBolas = gestorBolas;
+
+        actualizarVisualizacion();
+    }
+
+    /**
+     * Swing llama automáticamente este método cada vez que el panel necesita
+     * dibujarse.
+     *
+     * @param g objeto usado para realizar los dibujos
+     */
     @Override
-    protected void paintComponent(java.awt.Graphics g) {
+    protected void paintComponent(Graphics g) {
+
+        /*
+         * Limpia el dibujo anterior y vuelve a pintar el fondo.
+         */
         super.paintComponent(g);
 
-
+        dibujarLineaCentral(g);
+        dibujarPaletas(g);
+        dibujarBolas(g);
     }
 
+    /**
+     * Dibuja manualmente la línea punteada ubicada en el centro del tablero.
+     *
+     * @param g objeto utilizado para dibujar
+     */
+    private void dibujarLineaCentral(Graphics g) {
+
+        g.setColor(Color.WHITE);
+
+        int centroX = getWidth() / 2;
+
+        /*
+         * Cada rectángulo forma una sección de la línea punteada.
+         */
+        for (int y = 0; y < getHeight(); y += 24) {
+            g.fillRect(
+                    centroX - 2,
+                    y,
+                    4,
+                    14
+            );
+        }
+    }
+
+    /**
+     * Dibuja manualmente las dos paletas utilizando fillRect().
+     *
+     * @param g objeto utilizado para dibujar
+     */
+    private void dibujarPaletas(Graphics g) {
+
+        /*
+         * Durante los primeros instantes los jugadores todavía podrían no
+         * estar configurados.
+         */
+        if (jugadorIzquierdo == null || jugadorDerecho == null) {
+            return;
+        }
+
+        g.setColor(Color.WHITE);
+
+        /*
+         * Paleta izquierda.
+         */
+        g.fillRect(
+                jugadorIzquierdo.getPaleta().getX(),
+                jugadorIzquierdo.getPaleta().getY(),
+                jugadorIzquierdo.getPaleta().getAncho(),
+                jugadorIzquierdo.getPaleta().getAlto()
+        );
+
+        /*
+         * Paleta derecha.
+         */
+        g.fillRect(
+                jugadorDerecho.getPaleta().getX(),
+                jugadorDerecho.getPaleta().getY(),
+                jugadorDerecho.getPaleta().getAncho(),
+                jugadorDerecho.getPaleta().getAlto()
+        );
+    }
+
+    /**
+     * Solicita al gestor que dibuje todas las bolas activas.
+     *
+     * @param g objeto utilizado para dibujar
+     */
+    private void dibujarBolas(Graphics g) {
+
+        if (gestorBolas != null) {
+            gestorBolas.dibujarBolas(g);
+        }
+    }
+
+    /**
+     * Solicita un repintado seguro desde el hilo de eventos de Swing.
+     */
     public void actualizarVisualizacion() {
         SwingUtilities.invokeLater(this::repaint);
     }
+
+    /**
+     * Detiene el temporizador de dibujo. Puede llamarse al cerrar la ventana.
+     */
+    public void detenerTemporizadorDibujo() {
+        temporizadorDibujo.stop();
+    }
     
-     
+    
 
     /**
      * This method is called from within the constructor to initialize the form.
