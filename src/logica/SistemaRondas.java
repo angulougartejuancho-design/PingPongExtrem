@@ -70,22 +70,28 @@ public class SistemaRondas {
         return false;
     }
 
-    private void finalizarRonda() {
-        Jugador ganadorRonda = determinarGanadorRonda();
-        if (ganadorRonda != null) {
-            ganadorRonda.sumarRondaGanada();
-        }
+    private synchronized void finalizarRonda() {
+      
 
-        boolean alguienGanoLaPartida =
-                jugador1.getRondasGanadas() >= RONDAS_PARA_GANAR
-                || jugador2.getRondasGanadas() >= RONDAS_PARA_GANAR;
+    Jugador ganadorRonda = determinarGanadorRonda();
 
-        if (alguienGanoLaPartida || rondaActual >= TOTAL_RONDAS) {
-            partidaFinalizada = true;
-        } else {
-            rondaActual++;
-            iniciarRonda();
-        }
+    if (ganadorRonda != null) {
+        ganadorRonda.sumarRondaGanada();
+    }
+
+    boolean alguienGanoLaPartida
+            = jugador1.getRondasGanadas() >= RONDAS_PARA_GANAR
+            || jugador2.getRondasGanadas() >= RONDAS_PARA_GANAR;
+
+    if (alguienGanoLaPartida || rondaActual >= TOTAL_RONDAS) {
+
+        partidaFinalizada = true;
+
+    } else {
+
+        rondaActual++;
+        iniciarRonda();
+    }
     }
 
     public synchronized Jugador determinarGanadorRonda() {

@@ -11,20 +11,29 @@ import java.util.Random;
 
 public class Bola implements Runnable {
 
-    private int x;
-    private int y;
+     private volatile int x;
+    private volatile int y;
 
-    private int dx;
-    private int dy;
+    private volatile int dx;
+    private volatile int dy;
 
     private static final int TAMANIO = 18;
     private static final int DURACION_CONGELAMIENTO_MS = 3000;
 
-    private int pausaMovimientoMs;
+    /*
+     * Un valor menor representa una mayor velocidad.
+     */
+    private volatile int pausaMovimientoMs;
 
+    /*
+     * Control de ejecución y pausa del hilo.
+     */
     private volatile boolean activa = true;
     private volatile boolean pausada = false;
 
+    /*
+     * Control de efectos especiales.
+     */
     private boolean fantasmaUsada = false;
     private boolean efectoRapidoAplicado = false;
 
@@ -55,24 +64,34 @@ public class Bola implements Runnable {
         int anchoPanel = obtenerAnchoPanel();
         int altoPanel = obtenerAltoPanel();
 
+        /*
+         * La bola inicia en el centro del tablero.
+         */
         this.x = (anchoPanel - TAMANIO) / 2;
         this.y = (altoPanel - TAMANIO) / 2;
 
         /*
-         * Dirección aleatoria.
+         * Dirección inicial aleatoria.
          */
         this.dx = random.nextBoolean() ? 4 : -4;
         this.dy = random.nextBoolean() ? 4 : -4;
 
+        /*
+         * La dificultad define la probabilidad
+         * de que la bola sea especial.
+         */
         this.tipo = generarTipoAleatorio(
                 this.dificultad.getProbabilidadEspecial()
         );
 
+        /*
+         * La dificultad define la velocidad base.
+         */
         this.pausaMovimientoMs
                 = this.dificultad.getRetardoMovimiento();
 
         /*
-         * Una bola rápida comienza con mayor velocidad.
+         * Una bola rápida inicia con mayor velocidad.
          */
         if (tipo == TipoBola.RAPIDA) {
 
@@ -86,6 +105,9 @@ public class Bola implements Runnable {
         }
     }
 
+    /**
+     * Cada bola trabaja mediante su propio hilo.
+     */
     @Override
     public void run() {
 
@@ -109,6 +131,9 @@ public class Bola implements Runnable {
         }
     }
 
+    /**
+     * Actualiza la posición de la bola y revisa colisiones.
+     */
     private void mover() {
 
         x += dx;
@@ -119,6 +144,9 @@ public class Bola implements Runnable {
         verificarSalidaLateral();
     }
 
+    /**
+     * Rebote en los bordes superior e inferior.
+     */
     private void rebotarArribaAbajo() {
 
         if (y <= 0) {
@@ -137,6 +165,9 @@ public class Bola implements Runnable {
         }
     }
 
+    /**
+     * Revisa las colisiones con ambas paletas.
+     */
     private void verificarChoquePaletas() {
 
         Rectangle rectanguloBola = getRectangulo();
@@ -156,11 +187,14 @@ public class Bola implements Runnable {
         );
 
         /*
-         * Colisión con paleta izquierda.
+         * Colisión con la paleta izquierda.
          */
         if (rectanguloBola.intersects(paletaIzquierda)
                 && dx < 0) {
 
+            /*
+             * La bola fantasma atraviesa una paleta una sola vez.
+             */
             if (tipo == TipoBola.FANTASMA
                     && !fantasmaUsada) {
 
@@ -168,20 +202,24 @@ public class Bola implements Runnable {
                 return;
             }
 
+            /*
+             * Se reposiciona fuera de la paleta para evitar
+             * colisiones repetidas.
+             */
             x = jugadorIzquierdo.getPaleta().getX()
                     + jugadorIzquierdo.getPaleta().getAncho();
 
             dx = Math.abs(dx);
 
             /*
-             * La paleta izquierda golpeó la bola,
-             * por lo tanto el rival es el jugador derecho.
+             * La paleta izquierda golpeó la bola.
+             * El rival es el jugador derecho.
              */
             aplicarEfectoEspecial(jugadorDerecho);
         }
 
         /*
-         * Colisión con paleta derecha.
+         * Colisión con la paleta derecha.
          */
         if (rectanguloBola.intersects(paletaDerecha)
                 && dx > 0) {
@@ -199,17 +237,21 @@ public class Bola implements Runnable {
             dx = -Math.abs(dx);
 
             /*
-             * La paleta derecha golpeó la bola,
-             * por lo tanto el rival es el jugador izquierdo.
+             * La paleta derecha golpeó la bola.
+             * El rival es el jugador izquierdo.
              */
             aplicarEfectoEspecial(jugadorIzquierdo);
         }
     }
 
+    /**
+     * Detecta cuando la bola sale por alguno de los laterales.
+     */
     private void verificarSalidaLateral() {
 
         /*
-         * Sale por el lado izquierdo.
+         * La bola salió por el lado izquierdo.
+         * El punto corresponde al jugador derecho.
          */
         if (x + TAMANIO < 0) {
 
@@ -218,7 +260,8 @@ public class Bola implements Runnable {
         }
 
         /*
-         * Sale por el lado derecho.
+         * La bola salió por el lado derecho.
+         * El punto corresponde al jugador izquierdo.
          */
         if (x > obtenerAnchoPanel()) {
 
@@ -227,6 +270,9 @@ public class Bola implements Runnable {
         }
     }
 
+    /**
+     * Aplica el puntaje según el tipo de bola.
+     */
     private void aplicarPuntos(Jugador jugador) {
 
         switch (tipo) {
@@ -255,11 +301,13 @@ public class Bola implements Runnable {
         }
     }
 
+    /**
+     * Aplica los efectos especiales al golpear una paleta.
+     */
     private void aplicarEfectoEspecial(Jugador rival) {
 
         /*
-         * La bola rápida aumenta su velocidad una sola vez
-         * después de una colisión.
+         * La bola rápida aumenta su velocidad una sola vez.
          */
         if (tipo == TipoBola.RAPIDA
                 && !efectoRapidoAplicado) {
@@ -287,11 +335,18 @@ public class Bola implements Runnable {
         }
     }
 
+    /**
+     * Genera una bola normal o especial según la dificultad.
+     */
     private TipoBola generarTipoAleatorio(
             int probabilidadEspecial) {
 
         int decision = random.nextInt(100);
 
+        /*
+         * Si no se cumple la probabilidad,
+         * se genera una bola normal.
+         */
         if (decision >= probabilidadEspecial) {
             return TipoBola.NORMAL;
         }
@@ -309,6 +364,9 @@ public class Bola implements Runnable {
         ];
     }
 
+    /**
+     * Dibuja la bola según su color.
+     */
     public void dibujar(Graphics g) {
 
         g.setColor(obtenerColor());
@@ -321,6 +379,9 @@ public class Bola implements Runnable {
         );
     }
 
+    /**
+     * Devuelve el color correspondiente al tipo de bola.
+     */
     private Color obtenerColor() {
 
         switch (tipo) {
@@ -348,6 +409,9 @@ public class Bola implements Runnable {
         }
     }
 
+    /**
+     * Obtiene el ancho actual del panel.
+     */
     private int obtenerAnchoPanel() {
 
         int ancho = panel.getWidth();
@@ -365,6 +429,9 @@ public class Bola implements Runnable {
         return 900;
     }
 
+    /**
+     * Obtiene el alto actual del panel.
+     */
     private int obtenerAltoPanel() {
 
         int alto = panel.getHeight();
@@ -382,6 +449,9 @@ public class Bola implements Runnable {
         return 400;
     }
 
+    /**
+     * Rectángulo usado para detectar colisiones.
+     */
     public Rectangle getRectangulo() {
 
         return new Rectangle(
@@ -394,6 +464,10 @@ public class Bola implements Runnable {
 
     public void setPausada(boolean pausada) {
         this.pausada = pausada;
+    }
+
+    public boolean isPausada() {
+        return pausada;
     }
 
     public boolean isActiva() {
@@ -410,5 +484,17 @@ public class Bola implements Runnable {
 
     public Dificultad getDificultad() {
         return dificultad;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public int getTamanio() {
+        return TAMANIO;
     }
 }
