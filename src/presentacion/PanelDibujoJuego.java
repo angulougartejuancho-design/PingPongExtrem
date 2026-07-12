@@ -18,11 +18,12 @@ public class PanelDibujoJuego extends javax.swing.JPanel {
     private Jugador jugadorIzquierdo;
     private Jugador jugadorDerecho;
     private GestorBolas gestorBolas;
+    private volatile boolean juegoPausado = false;
 
     public PanelDibujoJuego() {
         setBackground(new Color(0, 153, 153));
         setFocusable(true);
-        
+
         new javax.swing.Timer(15, e -> repaint()).start();
     }
 
@@ -36,9 +37,40 @@ public class PanelDibujoJuego extends javax.swing.JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        dibujarMesa(g);
         dibujarLineaCentral(g);
         dibujarPaletas(g);
         dibujarBolas(g);
+        dibujarPausa(g);
+    }
+
+    private void dibujarMesa(Graphics g) {
+
+        g.setColor(new java.awt.Color(0, 102, 76));
+        g.fillRect(0, 0, getWidth(), getHeight());
+
+        g.setColor(java.awt.Color.WHITE);
+
+        // Borde exterior de la mesa
+        g.drawRect(
+                5,
+                5,
+                getWidth() - 10,
+                getHeight() - 10
+        );
+
+        // Línea horizontal central, estilo mesa de ping pong
+        g.drawLine(
+                5,
+                getHeight() / 2,
+                getWidth() - 5,
+                getHeight() / 2
+        );
+    }
+
+    public void setJuegoPausado(boolean juegoPausado) {
+        this.juegoPausado = juegoPausado;
+        repaint();
     }
 
     private void dibujarLineaCentral(Graphics g) {
@@ -73,10 +105,55 @@ public class PanelDibujoJuego extends javax.swing.JPanel {
         );
     }
 
+    private void dibujarPausa(Graphics g) {
+
+        if (!juegoPausado) {
+            return;
+        }
+
+        g.setColor(new java.awt.Color(0, 0, 0, 160));
+        g.fillRect(0, 0, getWidth(), getHeight());
+
+        g.setColor(java.awt.Color.WHITE);
+        g.setFont(new java.awt.Font(
+                "Arial",
+                java.awt.Font.BOLD,
+                40
+        ));
+
+        String titulo = "PAUSA";
+
+        int anchoTitulo
+                = g.getFontMetrics().stringWidth(titulo);
+
+        g.drawString(
+                titulo,
+                (getWidth() - anchoTitulo) / 2,
+                getHeight() / 2
+        );
+
+        g.setFont(new java.awt.Font(
+                "Arial",
+                java.awt.Font.PLAIN,
+                16
+        ));
+
+        String subtitulo
+                = "Presione Reanudar para continuar";
+
+        int anchoSubtitulo
+                = g.getFontMetrics().stringWidth(subtitulo);
+
+        g.drawString(
+                subtitulo,
+                (getWidth() - anchoSubtitulo) / 2,
+                getHeight() / 2 + 35
+        );
+    }
+
     private void dibujarBolas(Graphics g) {
         if (gestorBolas != null) {
             gestorBolas.dibujarBolas(g);
         }
     }
 }
-    

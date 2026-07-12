@@ -6,30 +6,22 @@ package logica;
 
 import java.awt.Graphics;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.JPanel;
 
 public class GestorBolas {
 
-    /*
-     * Colección concurrente segura para almacenar
-     * las bolas ejecutadas por diferentes hilos.
-     */
     private final CopyOnWriteArrayList<Bola> bolas
             = new CopyOnWriteArrayList<>();
 
     private final JPanel panel;
     private final Jugador jugadorIzquierdo;
     private final Jugador jugadorDerecho;
-
-    private volatile Dificultad dificultad
-            = Dificultad.NORMAL;
-
+    private volatile Dificultad dificultad = Dificultad.NORMAL;
     private volatile boolean generando = false;
     private volatile boolean pausado = false;
-
     private Thread hiloGenerador;
-
-    private int contadorBolas = 0;
+    private final AtomicInteger contadorBolas = new AtomicInteger(0);
 
     public GestorBolas(
             JPanel panel,
@@ -43,7 +35,7 @@ public class GestorBolas {
 
     public void setDificultad(Dificultad dificultad) {
 
-        if (dificultad != null) {
+        if (dificultad != null && !generando) {
             this.dificultad = dificultad;
         }
     }
@@ -52,17 +44,16 @@ public class GestorBolas {
         return dificultad;
     }
 
+    
     public synchronized void crearBola() {
 
         limpiarBolasInactivas();
 
-        if (!generando) {
+        if (!generando || pausado) {
             return;
         }
 
-        if (bolas.size()
-                >= dificultad.getMaximoBolas()) {
-
+        if (bolas.size() >= dificultad.getMaximoBolas()) {
             return;
         }
 
@@ -75,11 +66,11 @@ public class GestorBolas {
 
         bolas.add(bola);
 
-        contadorBolas++;
+        int numeroBola = contadorBolas.incrementAndGet();
 
         Thread hiloBola = new Thread(
                 bola,
-                "Hilo-Bola-" + contadorBolas
+                "Hilo-Bola-" + numeroBola
         );
 
         hiloBola.setDaemon(true);
@@ -90,7 +81,7 @@ public class GestorBolas {
                 + bola.getTipo()
                 + " | Dificultad: "
                 + dificultad
-                + " | Activas: "
+                + " | Bolas activas: "
                 + bolas.size()
         );
     }
@@ -105,7 +96,7 @@ public class GestorBolas {
         pausado = false;
 
         /*
-         * Primera bola inmediatamente.
+         * Primera bola inmediata.
          */
         crearBola();
 
@@ -145,6 +136,7 @@ public class GestorBolas {
         }
     }
 
+
     public synchronized void detenerTodo() {
 
         generando = false;
@@ -164,6 +156,7 @@ public class GestorBolas {
 
         panel.repaint();
     }
+
 
     public void limpiarBolasInactivas() {
 

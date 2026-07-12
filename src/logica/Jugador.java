@@ -5,24 +5,28 @@
 package logica;
 
 import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  *
  * @author Anyel
  */
 public class Jugador {
-    
+
     private volatile String nombre;
 
     private final Paleta paleta;
-
     private final AtomicInteger puntosRonda = new AtomicInteger(0);
-
     private final AtomicInteger puntosTotales = new AtomicInteger(0);
-
     private final AtomicInteger rondasGanadas = new AtomicInteger(0);
 
     public Jugador(String nombre, Paleta paleta) {
-        this.nombre = nombre;
+
+        if (nombre == null || nombre.trim().isEmpty()) {
+            this.nombre = "Jugador";
+        } else {
+            this.nombre = nombre.trim();
+        }
+
         this.paleta = paleta;
     }
 
@@ -31,6 +35,7 @@ public class Jugador {
     }
 
     public void setNombre(String nombre) {
+
         if (nombre != null && !nombre.trim().isEmpty()) {
             this.nombre = nombre.trim();
         }
@@ -40,7 +45,16 @@ public class Jugador {
         return paleta;
     }
 
+    /**
+     * Suma o resta puntos de forma atómica.
+     *
+     * @param valor cantidad de puntos
+     */
     public void sumarPuntos(int valor) {
+
+        /*
+         * Cada operación addAndGet es atómica.
+         */
         puntosRonda.addAndGet(valor);
         puntosTotales.addAndGet(valor);
     }
@@ -61,23 +75,32 @@ public class Jugador {
         rondasGanadas.incrementAndGet();
     }
 
-
+    /**
+     * Reinicia únicamente los puntos de la ronda actual.
+     */
     public void reiniciarPuntosRonda() {
         puntosRonda.set(0);
     }
 
- 
+    /**
+     * Reinicia completamente al jugador.
+     */
     public void reiniciarJugador() {
+
         puntosRonda.set(0);
         puntosTotales.set(0);
         rondasGanadas.set(0);
+
         paleta.reiniciarPosicion();
     }
 
     @Override
     public String toString() {
-        return nombre + " [ronda=" + getPuntos()
+
+        return nombre
+                + " [ronda=" + getPuntos()
                 + ", total=" + getPuntosTotales()
-                + ", rondasGanadas=" + getRondasGanadas() + "]";
+                + ", rondasGanadas=" + getRondasGanadas()
+                + "]";
     }
 }

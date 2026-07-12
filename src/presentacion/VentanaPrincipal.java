@@ -12,7 +12,6 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import javax.swing.SwingUtilities;
 import util.Validador;
-
 import logica.Jugador;
 import logica.Paleta;
 import logica.SistemaRondas;
@@ -37,10 +36,87 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         initComponents();
         cargarDificultades();
         setLocationRelativeTo(null);
+
+        inicializarJugadoresYPaletas();
+
+        solicitarNombresJugadores();
+
         configurarEventosTeclado();
         conectarBotones();
-        inicializarJugadoresYPaletas();
     }
+
+    private void solicitarNombresJugadores() {
+
+    String jugador1;
+
+    while (true) {
+
+        jugador1 = javax.swing.JOptionPane.showInputDialog(
+                this,
+                "Ingrese el nombre del Jugador 1:",
+                "Extreme Ping Pong",
+                javax.swing.JOptionPane.QUESTION_MESSAGE
+        );
+
+        // Si presiona Cancelar
+        if (jugador1 == null) {
+            dispose();
+            System.exit(0);
+        }
+
+        jugador1 = jugador1.trim();
+
+        // Si deja el nombre vacío
+        if (jugador1.isEmpty()) {
+
+            javax.swing.JOptionPane.showMessageDialog(
+                    this,
+                    "Debe ingresar el nombre del Jugador 1.",
+                    "Nombre requerido",
+                    javax.swing.JOptionPane.WARNING_MESSAGE
+            );
+
+        } else {
+            break;
+        }
+    }
+
+    String jugador2;
+
+    while (true) {
+
+        jugador2 = javax.swing.JOptionPane.showInputDialog(
+                this,
+                "Ingrese el nombre del Jugador 2:",
+                "Extreme Ping Pong",
+                javax.swing.JOptionPane.QUESTION_MESSAGE
+        );
+
+        // Si presiona Cancelar
+        if (jugador2 == null) {
+            dispose();
+            System.exit(0);
+        }
+
+        jugador2 = jugador2.trim();
+
+        // Si deja el nombre vacío
+        if (jugador2.isEmpty()) {
+
+            javax.swing.JOptionPane.showMessageDialog(
+                    this,
+                    "Debe ingresar el nombre del Jugador 2.",
+                    "Nombre requerido",
+                    javax.swing.JOptionPane.WARNING_MESSAGE
+            );
+
+        } else {
+            break;
+        }
+    }
+
+    establecerNombresJugadores(jugador1, jugador2);
+}
 
     public void establecerNombresJugadores(String Jugador1, String Jugador2) {
 
@@ -87,12 +163,11 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             case "Extremo":
                 return Dificultad.EXTREMO;
 
-            case "Normal":
             default:
                 return Dificultad.NORMAL;
         }
     }
-
+ 
     private void inicializarJugadoresYPaletas() {
 
         Paleta paletaIzquierda = new Paleta(
@@ -213,60 +288,149 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         );
     }
 
-    private Dificultad seleccionarDificultad() {
-
-        Dificultad[] opciones = {
-            Dificultad.FACIL,
-            Dificultad.NORMAL,
-            Dificultad.DIFICIL,
-            Dificultad.EXTREMO
-        };
-
-        Object seleccion = javax.swing.JOptionPane.showInputDialog(
-                this,
-                "Seleccione la dificultad:",
-                "Dificultad",
-                javax.swing.JOptionPane.QUESTION_MESSAGE,
-                null,
-                opciones,
-                Dificultad.NORMAL
-        );
-
-        if (seleccion instanceof Dificultad) {
-            return (Dificultad) seleccion;
-        }
-
-        return null;
-    }
-
     private void pausarJuego() {
 
         enPausaEjemplo = !enPausaEjemplo;
 
-        String estado = enPausaEjemplo ? "PAUSADO" : "REANUDADO";
+        String estado = enPausaEjemplo
+                ? "PAUSADO"
+                : "REANUDADO";
 
-        System.out.println("[Prueba] Estado: " + estado);
+        System.out.println("[Juego] Estado: " + estado);
 
         jugadorIzquierdo.getPaleta().setPausado(enPausaEjemplo);
         jugadorDerecho.getPaleta().setPausado(enPausaEjemplo);
 
         gestorBolas.setPausado(enPausaEjemplo);
 
+        getPanelJuego().setJuegoPausado(enPausaEjemplo);
+
+        btnPausa.setText(
+                enPausaEjemplo
+                        ? "Reanudar"
+                        : "Pausa"
+        );
+
         if (temporizadorRonda != null) {
+
             if (enPausaEjemplo) {
                 temporizadorRonda.stop();
             } else {
                 temporizadorRonda.start();
             }
         }
+
+        requestFocusInWindow();
     }
 
     private void reiniciarJuego() {
 
+        boolean partidaEnCurso
+                = gestorBolas.isGenerando()
+                || jugadorIzquierdo.getPuntosTotales() != 0
+                || jugadorDerecho.getPuntosTotales() != 0;
+
+        if (partidaEnCurso) {
+
+            String ganadorParcial;
+
+            if (jugadorIzquierdo.getRondasGanadas()
+                    > jugadorDerecho.getRondasGanadas()) {
+
+                ganadorParcial = jugadorIzquierdo.getNombre();
+
+            } else if (jugadorDerecho.getRondasGanadas()
+                    > jugadorIzquierdo.getRondasGanadas()) {
+
+                ganadorParcial = jugadorDerecho.getNombre();
+
+            } else if (jugadorIzquierdo.getPuntosTotales()
+                    > jugadorDerecho.getPuntosTotales()) {
+
+                ganadorParcial = jugadorIzquierdo.getNombre();
+
+            } else if (jugadorDerecho.getPuntosTotales()
+                    > jugadorIzquierdo.getPuntosTotales()) {
+
+                ganadorParcial = jugadorDerecho.getNombre();
+
+            } else {
+
+                ganadorParcial = "Empate";
+            }
+
+            String mensaje
+                    = "PARTIDA INTERRUMPIDA\n\n"
+                    + "Ganador parcial: " + ganadorParcial + "\n\n"
+                    + "Rondas ganadas:\n"
+                    + jugadorIzquierdo.getNombre() + ": "
+                    + jugadorIzquierdo.getRondasGanadas() + "\n"
+                    + jugadorDerecho.getNombre() + ": "
+                    + jugadorDerecho.getRondasGanadas() + "\n\n"
+                    + "Puntos totales:\n"
+                    + jugadorIzquierdo.getNombre() + ": "
+                    + jugadorIzquierdo.getPuntosTotales() + "\n"
+                    + jugadorDerecho.getNombre() + ": "
+                    + jugadorDerecho.getPuntosTotales() + "\n\n"
+                    + "¿Desea reiniciar la partida?";
+
+            int opcion = javax.swing.JOptionPane.showConfirmDialog(
+                    this,
+                    mensaje,
+                    "Confirmar reinicio",
+                    javax.swing.JOptionPane.YES_NO_OPTION,
+                    javax.swing.JOptionPane.QUESTION_MESSAGE
+            );
+
+            if (opcion != javax.swing.JOptionPane.YES_OPTION) {
+                requestFocusInWindow();
+                return;
+            }
+        }
+
+        if (temporizadorRonda != null) {
+            temporizadorRonda.stop();
+        }
+
+        gestorBolas.detenerTodo();
+
+        enPausaEjemplo = false;
+        getPanelJuego().setJuegoPausado(false);
+        btnPausa.setText("Pausa");
+        dificultadSeleccionada = null;
+
+        jugadorIzquierdo.getPaleta().setMoviendoArriba(false);
+        jugadorIzquierdo.getPaleta().setMoviendoAbajo(false);
+
+        jugadorDerecho.getPaleta().setMoviendoArriba(false);
+        jugadorDerecho.getPaleta().setMoviendoAbajo(false);
+
+        jugadorIzquierdo.getPaleta().setPausado(false);
+        jugadorDerecho.getPaleta().setPausado(false);
+
+        sistemaRondas.reiniciarPartida();
+
+        lblPuntos1.setText("0");
+        lblPuntos2.setText("0");
+
+        lblTemporizador.setText(
+                String.valueOf(sistemaRondas.getTiempoRestante())
+        );
+
         cmbDificultad.setEnabled(true);
         cmbDificultad.setSelectedItem("Normal");
 
-        System.out.println("[Juego] Reiniciando partida.");
+        btnComenzar.setEnabled(true);
+        btnPausa.setEnabled(true);
+
+        getPanelJuego().repaint();
+
+        requestFocusInWindow();
+
+        System.out.println("[Juego] Partida reiniciada.");
+    }
+
+    private void reiniciarSinConfirmacion() {
 
         if (temporizadorRonda != null) {
             temporizadorRonda.stop();
@@ -276,9 +440,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         enPausaEjemplo = false;
         dificultadSeleccionada = null;
-
-        jugadorIzquierdo.getPaleta().setPausado(false);
-        jugadorDerecho.getPaleta().setPausado(false);
+        getPanelJuego().setJuegoPausado(false);
+        btnPausa.setText("Pausa");
 
         jugadorIzquierdo.getPaleta().setMoviendoArriba(false);
         jugadorIzquierdo.getPaleta().setMoviendoAbajo(false);
@@ -286,19 +449,29 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         jugadorDerecho.getPaleta().setMoviendoArriba(false);
         jugadorDerecho.getPaleta().setMoviendoAbajo(false);
 
+        jugadorIzquierdo.getPaleta().setPausado(false);
+        jugadorDerecho.getPaleta().setPausado(false);
+
         sistemaRondas.reiniciarPartida();
 
         lblPuntos1.setText("0");
         lblPuntos2.setText("0");
 
         lblTemporizador.setText(
-                String.valueOf(
-                        sistemaRondas.getTiempoRestante()
-                )
+                String.valueOf(sistemaRondas.getTiempoRestante())
         );
 
+        cmbDificultad.setEnabled(true);
+        cmbDificultad.setSelectedItem("Normal");
+
+        btnComenzar.setEnabled(true);
+        btnPausa.setEnabled(true);
+
         getPanelJuego().repaint();
+
         requestFocusInWindow();
+
+        System.out.println("[Juego] Nueva partida preparada.");
     }
 
     private void iniciarTemporizadorRonda() {
@@ -348,15 +521,64 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         gestorBolas.detenerTodo();
 
-        jugadorIzquierdo.getPaleta().setPausado(true);
-        jugadorDerecho.getPaleta().setPausado(true);
+        jugadorIzquierdo.getPaleta().detener();
+        jugadorDerecho.getPaleta().detener();
 
-        javax.swing.JOptionPane.showMessageDialog(
+        Jugador ganador = sistemaRondas.determinarGanadorPartida();
+
+        String nombreGanador;
+
+        if (ganador != null) {
+            nombreGanador = ganador.getNombre();
+        } else {
+            nombreGanador = "Empate";
+        }
+
+        String mensaje
+                = "🏆 PARTIDA FINALIZADA 🏆\n\n"
+                + "Ganador: " + nombreGanador + "\n\n"
+                + "Rondas ganadas:\n"
+                + jugadorIzquierdo.getNombre()
+                + ": "
+                + jugadorIzquierdo.getRondasGanadas()
+                + "\n"
+                + jugadorDerecho.getNombre()
+                + ": "
+                + jugadorDerecho.getRondasGanadas()
+                + "\n\n"
+                + "Puntos totales:\n"
+                + jugadorIzquierdo.getNombre()
+                + ": "
+                + jugadorIzquierdo.getPuntosTotales()
+                + "\n"
+                + jugadorDerecho.getNombre()
+                + ": "
+                + jugadorDerecho.getPuntosTotales();
+
+        int opcion = javax.swing.JOptionPane.showConfirmDialog(
                 this,
-                sistemaRondas.obtenerResumenFinal(),
-                "Resultado de la partida",
+                mensaje + "\n\n¿Desea comenzar una nueva partida?",
+                "Resultado final",
+                javax.swing.JOptionPane.YES_NO_OPTION,
                 javax.swing.JOptionPane.INFORMATION_MESSAGE
         );
+
+        if (opcion == javax.swing.JOptionPane.YES_OPTION) {
+
+            reiniciarSinConfirmacion();
+            solicitarNombresJugadores();
+
+        } else {
+
+            cmbDificultad.setEnabled(true);
+
+            btnComenzar.setEnabled(false);
+            btnPausa.setEnabled(false);
+            btnReinicio.setEnabled(true);
+
+            getPanelJuego().setJuegoPausado(false);
+            btnPausa.setText("Pausa");
+        }
     }
 
     public PanelDibujoJuego getPanelJuego() {
