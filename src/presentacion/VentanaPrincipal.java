@@ -12,7 +12,6 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import javax.swing.SwingUtilities;
 import util.Validador;
-
 import logica.Jugador;
 import logica.Paleta;
 import logica.SistemaRondas;
@@ -48,33 +47,76 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
     private void solicitarNombresJugadores() {
 
-        String jugador1 = javax.swing.JOptionPane.showInputDialog(
+    String jugador1;
+
+    while (true) {
+
+        jugador1 = javax.swing.JOptionPane.showInputDialog(
                 this,
                 "Ingrese el nombre del Jugador 1:",
                 "Extreme Ping Pong",
                 javax.swing.JOptionPane.QUESTION_MESSAGE
         );
 
-        if (jugador1 == null || jugador1.trim().isEmpty()) {
-            jugador1 = "Jugador 1";
+        // Si presiona Cancelar
+        if (jugador1 == null) {
+            dispose();
+            System.exit(0);
         }
 
-        String jugador2 = javax.swing.JOptionPane.showInputDialog(
+        jugador1 = jugador1.trim();
+
+        // Si deja el nombre vacío
+        if (jugador1.isEmpty()) {
+
+            javax.swing.JOptionPane.showMessageDialog(
+                    this,
+                    "Debe ingresar el nombre del Jugador 1.",
+                    "Nombre requerido",
+                    javax.swing.JOptionPane.WARNING_MESSAGE
+            );
+
+        } else {
+            break;
+        }
+    }
+
+    String jugador2;
+
+    while (true) {
+
+        jugador2 = javax.swing.JOptionPane.showInputDialog(
                 this,
                 "Ingrese el nombre del Jugador 2:",
                 "Extreme Ping Pong",
                 javax.swing.JOptionPane.QUESTION_MESSAGE
         );
 
-        if (jugador2 == null || jugador2.trim().isEmpty()) {
-            jugador2 = "Jugador 2";
+        // Si presiona Cancelar
+        if (jugador2 == null) {
+            dispose();
+            System.exit(0);
         }
 
-        establecerNombresJugadores(
-                jugador1,
-                jugador2
-        );
+        jugador2 = jugador2.trim();
+
+        // Si deja el nombre vacío
+        if (jugador2.isEmpty()) {
+
+            javax.swing.JOptionPane.showMessageDialog(
+                    this,
+                    "Debe ingresar el nombre del Jugador 2.",
+                    "Nombre requerido",
+                    javax.swing.JOptionPane.WARNING_MESSAGE
+            );
+
+        } else {
+            break;
+        }
     }
+
+    establecerNombresJugadores(jugador1, jugador2);
+}
 
     public void establecerNombresJugadores(String Jugador1, String Jugador2) {
 
@@ -245,136 +287,193 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 + dificultadSeleccionada
         );
     }
-    
- 
+
     private void pausarJuego() {
 
         enPausaEjemplo = !enPausaEjemplo;
 
-        String estado = enPausaEjemplo ? "PAUSADO" : "REANUDADO";
+        String estado = enPausaEjemplo
+                ? "PAUSADO"
+                : "REANUDADO";
 
-        System.out.println("[Prueba] Estado: " + estado);
+        System.out.println("[Juego] Estado: " + estado);
 
         jugadorIzquierdo.getPaleta().setPausado(enPausaEjemplo);
         jugadorDerecho.getPaleta().setPausado(enPausaEjemplo);
 
         gestorBolas.setPausado(enPausaEjemplo);
 
+        getPanelJuego().setJuegoPausado(enPausaEjemplo);
+
+        btnPausa.setText(
+                enPausaEjemplo
+                        ? "Reanudar"
+                        : "Pausa"
+        );
+
         if (temporizadorRonda != null) {
+
             if (enPausaEjemplo) {
                 temporizadorRonda.stop();
             } else {
                 temporizadorRonda.start();
             }
         }
+
+        requestFocusInWindow();
     }
 
     private void reiniciarJuego() {
 
-    boolean partidaEnCurso
-            = gestorBolas.isGenerando()
-            || jugadorIzquierdo.getPuntosTotales() != 0
-            || jugadorDerecho.getPuntosTotales() != 0;
+        boolean partidaEnCurso
+                = gestorBolas.isGenerando()
+                || jugadorIzquierdo.getPuntosTotales() != 0
+                || jugadorDerecho.getPuntosTotales() != 0;
 
-    if (partidaEnCurso) {
+        if (partidaEnCurso) {
 
-        String ganadorParcial;
+            String ganadorParcial;
 
-        if (jugadorIzquierdo.getRondasGanadas()
-                > jugadorDerecho.getRondasGanadas()) {
+            if (jugadorIzquierdo.getRondasGanadas()
+                    > jugadorDerecho.getRondasGanadas()) {
 
-            ganadorParcial = jugadorIzquierdo.getNombre();
+                ganadorParcial = jugadorIzquierdo.getNombre();
 
-        } else if (jugadorDerecho.getRondasGanadas()
-                > jugadorIzquierdo.getRondasGanadas()) {
+            } else if (jugadorDerecho.getRondasGanadas()
+                    > jugadorIzquierdo.getRondasGanadas()) {
 
-            ganadorParcial = jugadorDerecho.getNombre();
+                ganadorParcial = jugadorDerecho.getNombre();
 
-        } else if (jugadorIzquierdo.getPuntosTotales()
-                > jugadorDerecho.getPuntosTotales()) {
+            } else if (jugadorIzquierdo.getPuntosTotales()
+                    > jugadorDerecho.getPuntosTotales()) {
 
-            ganadorParcial = jugadorIzquierdo.getNombre();
+                ganadorParcial = jugadorIzquierdo.getNombre();
 
-        } else if (jugadorDerecho.getPuntosTotales()
-                > jugadorIzquierdo.getPuntosTotales()) {
+            } else if (jugadorDerecho.getPuntosTotales()
+                    > jugadorIzquierdo.getPuntosTotales()) {
 
-            ganadorParcial = jugadorDerecho.getNombre();
+                ganadorParcial = jugadorDerecho.getNombre();
 
-        } else {
+            } else {
 
-            ganadorParcial = "Empate";
+                ganadorParcial = "Empate";
+            }
+
+            String mensaje
+                    = "PARTIDA INTERRUMPIDA\n\n"
+                    + "Ganador parcial: " + ganadorParcial + "\n\n"
+                    + "Rondas ganadas:\n"
+                    + jugadorIzquierdo.getNombre() + ": "
+                    + jugadorIzquierdo.getRondasGanadas() + "\n"
+                    + jugadorDerecho.getNombre() + ": "
+                    + jugadorDerecho.getRondasGanadas() + "\n\n"
+                    + "Puntos totales:\n"
+                    + jugadorIzquierdo.getNombre() + ": "
+                    + jugadorIzquierdo.getPuntosTotales() + "\n"
+                    + jugadorDerecho.getNombre() + ": "
+                    + jugadorDerecho.getPuntosTotales() + "\n\n"
+                    + "¿Desea reiniciar la partida?";
+
+            int opcion = javax.swing.JOptionPane.showConfirmDialog(
+                    this,
+                    mensaje,
+                    "Confirmar reinicio",
+                    javax.swing.JOptionPane.YES_NO_OPTION,
+                    javax.swing.JOptionPane.QUESTION_MESSAGE
+            );
+
+            if (opcion != javax.swing.JOptionPane.YES_OPTION) {
+                requestFocusInWindow();
+                return;
+            }
         }
 
-        String mensaje
-                = "PARTIDA INTERRUMPIDA\n\n"
-                + "Ganador parcial: " + ganadorParcial + "\n\n"
-                + "Rondas ganadas:\n"
-                + jugadorIzquierdo.getNombre() + ": "
-                + jugadorIzquierdo.getRondasGanadas() + "\n"
-                + jugadorDerecho.getNombre() + ": "
-                + jugadorDerecho.getRondasGanadas() + "\n\n"
-                + "Puntos totales:\n"
-                + jugadorIzquierdo.getNombre() + ": "
-                + jugadorIzquierdo.getPuntosTotales() + "\n"
-                + jugadorDerecho.getNombre() + ": "
-                + jugadorDerecho.getPuntosTotales() + "\n\n"
-                + "¿Desea reiniciar la partida?";
+        if (temporizadorRonda != null) {
+            temporizadorRonda.stop();
+        }
 
-        int opcion = javax.swing.JOptionPane.showConfirmDialog(
-                this,
-                mensaje,
-                "Confirmar reinicio",
-                javax.swing.JOptionPane.YES_NO_OPTION,
-                javax.swing.JOptionPane.QUESTION_MESSAGE
+        gestorBolas.detenerTodo();
+
+        enPausaEjemplo = false;
+        getPanelJuego().setJuegoPausado(false);
+        btnPausa.setText("Pausa");
+        dificultadSeleccionada = null;
+
+        jugadorIzquierdo.getPaleta().setMoviendoArriba(false);
+        jugadorIzquierdo.getPaleta().setMoviendoAbajo(false);
+
+        jugadorDerecho.getPaleta().setMoviendoArriba(false);
+        jugadorDerecho.getPaleta().setMoviendoAbajo(false);
+
+        jugadorIzquierdo.getPaleta().setPausado(false);
+        jugadorDerecho.getPaleta().setPausado(false);
+
+        sistemaRondas.reiniciarPartida();
+
+        lblPuntos1.setText("0");
+        lblPuntos2.setText("0");
+
+        lblTemporizador.setText(
+                String.valueOf(sistemaRondas.getTiempoRestante())
         );
 
-        if (opcion != javax.swing.JOptionPane.YES_OPTION) {
-            requestFocusInWindow();
-            return;
+        cmbDificultad.setEnabled(true);
+        cmbDificultad.setSelectedItem("Normal");
+
+        btnComenzar.setEnabled(true);
+        btnPausa.setEnabled(true);
+
+        getPanelJuego().repaint();
+
+        requestFocusInWindow();
+
+        System.out.println("[Juego] Partida reiniciada.");
+    }
+
+    private void reiniciarSinConfirmacion() {
+
+        if (temporizadorRonda != null) {
+            temporizadorRonda.stop();
         }
+
+        gestorBolas.detenerTodo();
+
+        enPausaEjemplo = false;
+        dificultadSeleccionada = null;
+        getPanelJuego().setJuegoPausado(false);
+        btnPausa.setText("Pausa");
+
+        jugadorIzquierdo.getPaleta().setMoviendoArriba(false);
+        jugadorIzquierdo.getPaleta().setMoviendoAbajo(false);
+
+        jugadorDerecho.getPaleta().setMoviendoArriba(false);
+        jugadorDerecho.getPaleta().setMoviendoAbajo(false);
+
+        jugadorIzquierdo.getPaleta().setPausado(false);
+        jugadorDerecho.getPaleta().setPausado(false);
+
+        sistemaRondas.reiniciarPartida();
+
+        lblPuntos1.setText("0");
+        lblPuntos2.setText("0");
+
+        lblTemporizador.setText(
+                String.valueOf(sistemaRondas.getTiempoRestante())
+        );
+
+        cmbDificultad.setEnabled(true);
+        cmbDificultad.setSelectedItem("Normal");
+
+        btnComenzar.setEnabled(true);
+        btnPausa.setEnabled(true);
+
+        getPanelJuego().repaint();
+
+        requestFocusInWindow();
+
+        System.out.println("[Juego] Nueva partida preparada.");
     }
 
-    if (temporizadorRonda != null) {
-        temporizadorRonda.stop();
-    }
-
-    gestorBolas.detenerTodo();
-
-    enPausaEjemplo = false;
-    dificultadSeleccionada = null;
-
-    jugadorIzquierdo.getPaleta().setMoviendoArriba(false);
-    jugadorIzquierdo.getPaleta().setMoviendoAbajo(false);
-
-    jugadorDerecho.getPaleta().setMoviendoArriba(false);
-    jugadorDerecho.getPaleta().setMoviendoAbajo(false);
-
-    jugadorIzquierdo.getPaleta().setPausado(false);
-    jugadorDerecho.getPaleta().setPausado(false);
-
-    sistemaRondas.reiniciarPartida();
-
-    lblPuntos1.setText("0");
-    lblPuntos2.setText("0");
-
-    lblTemporizador.setText(
-            String.valueOf(sistemaRondas.getTiempoRestante())
-    );
-
-    cmbDificultad.setEnabled(true);
-    cmbDificultad.setSelectedItem("Normal");
-
-    btnComenzar.setEnabled(true);
-    btnPausa.setEnabled(true);
-
-    getPanelJuego().repaint();
-
-    requestFocusInWindow();
-
-    System.out.println("[Juego] Partida reiniciada.");
-}
-  
-    
     private void iniciarTemporizadorRonda() {
 
         if (temporizadorRonda != null && temporizadorRonda.isRunning()) {
@@ -420,62 +519,67 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
     private void mostrarResultadoFinal() {
 
-    gestorBolas.detenerTodo();
+        gestorBolas.detenerTodo();
 
-    jugadorIzquierdo.getPaleta().detener();
-    jugadorDerecho.getPaleta().detener();
+        jugadorIzquierdo.getPaleta().detener();
+        jugadorDerecho.getPaleta().detener();
 
-    Jugador ganador = sistemaRondas.determinarGanadorPartida();
+        Jugador ganador = sistemaRondas.determinarGanadorPartida();
 
-    String nombreGanador;
+        String nombreGanador;
 
-    if (ganador != null) {
-        nombreGanador = ganador.getNombre();
-    } else {
-        nombreGanador = "Empate";
+        if (ganador != null) {
+            nombreGanador = ganador.getNombre();
+        } else {
+            nombreGanador = "Empate";
+        }
+
+        String mensaje
+                = "🏆 PARTIDA FINALIZADA 🏆\n\n"
+                + "Ganador: " + nombreGanador + "\n\n"
+                + "Rondas ganadas:\n"
+                + jugadorIzquierdo.getNombre()
+                + ": "
+                + jugadorIzquierdo.getRondasGanadas()
+                + "\n"
+                + jugadorDerecho.getNombre()
+                + ": "
+                + jugadorDerecho.getRondasGanadas()
+                + "\n\n"
+                + "Puntos totales:\n"
+                + jugadorIzquierdo.getNombre()
+                + ": "
+                + jugadorIzquierdo.getPuntosTotales()
+                + "\n"
+                + jugadorDerecho.getNombre()
+                + ": "
+                + jugadorDerecho.getPuntosTotales();
+
+        int opcion = javax.swing.JOptionPane.showConfirmDialog(
+                this,
+                mensaje + "\n\n¿Desea comenzar una nueva partida?",
+                "Resultado final",
+                javax.swing.JOptionPane.YES_NO_OPTION,
+                javax.swing.JOptionPane.INFORMATION_MESSAGE
+        );
+
+        if (opcion == javax.swing.JOptionPane.YES_OPTION) {
+
+            reiniciarSinConfirmacion();
+            solicitarNombresJugadores();
+
+        } else {
+
+            cmbDificultad.setEnabled(true);
+
+            btnComenzar.setEnabled(false);
+            btnPausa.setEnabled(false);
+            btnReinicio.setEnabled(true);
+
+            getPanelJuego().setJuegoPausado(false);
+            btnPausa.setText("Pausa");
+        }
     }
-
-    String mensaje
-            = "🏆 PARTIDA FINALIZADA 🏆\n\n"
-            + "Ganador: " + nombreGanador + "\n\n"
-            + "Rondas ganadas:\n"
-            + jugadorIzquierdo.getNombre()
-            + ": "
-            + jugadorIzquierdo.getRondasGanadas()
-            + "\n"
-            + jugadorDerecho.getNombre()
-            + ": "
-            + jugadorDerecho.getRondasGanadas()
-            + "\n\n"
-            + "Puntos totales:\n"
-            + jugadorIzquierdo.getNombre()
-            + ": "
-            + jugadorIzquierdo.getPuntosTotales()
-            + "\n"
-            + jugadorDerecho.getNombre()
-            + ": "
-            + jugadorDerecho.getPuntosTotales();
-
-    int opcion = javax.swing.JOptionPane.showConfirmDialog(
-            this,
-            mensaje + "\n\n¿Desea comenzar una nueva partida?",
-            "Resultado final",
-            javax.swing.JOptionPane.YES_NO_OPTION,
-            javax.swing.JOptionPane.INFORMATION_MESSAGE
-    );
-
-    if (opcion == javax.swing.JOptionPane.YES_OPTION) {
-
-        reiniciarJuego();
-        solicitarNombresJugadores();
-
-    } else {
-
-        cmbDificultad.setEnabled(true);
-        btnComenzar.setEnabled(false);
-        btnPausa.setEnabled(false);
-    }
-}
 
     public PanelDibujoJuego getPanelJuego() {
         return (PanelDibujoJuego) PanelJuego;
